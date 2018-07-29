@@ -17,18 +17,23 @@ logger.addHandler(stream_handler)
 
 class Nanaco:
     def __init__(self):
+        self._nanaco_number = None
+        self._card_number = None
+
         self._balance_card = None
         self._balance_center = None
 
+        self._credit_charge_password = None
+
+        self._registerd_credit_card = None
         self._charge_count = None
         self._charge_amount = None
-        self._registerd_credit_card = None
 
         self.page = None
 
     def login(self, nanaco_number, card_number):
-        # self.nanaco_number = nanaco_number
-        # self.card_number = card_number
+        self._nanaco_number = nanaco_number
+        self._card_number = card_number
 
         self.page = LoginPage()
         self.page.input_nanaco_number(nanaco_number)
@@ -44,6 +49,8 @@ class Nanaco:
         logger.info("balance_center: " + self.balance_center)
 
     def login_credit_charge(self, password):
+        self._credit_charge_password = password
+
         self.page = MenuPage()
         self.page = self.page.login_credit_charge(password)
 
@@ -72,12 +79,24 @@ class Nanaco:
         self.page.release(password)
 
     @property
+    def nanaco_number(self):
+        return self._nanaco_number
+
+    @property
+    def card_number(self):
+        return self._card_number
+
+    @property
     def balance_card(self):
         return self._balance_card
 
     @property
     def balance_center(self):
         return self._balance_center
+
+    @property
+    def credit_charge_password(self):
+        return  self._credit_charge_password
 
     @property
     def registered_credit_card(self):
