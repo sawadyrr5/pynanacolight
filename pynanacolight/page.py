@@ -1,197 +1,160 @@
 # -*- coding: utf-8 -*-
+"""
+ページの抽象レベル操作を行う
+"""
 from requests import session
-from pynanacolight.parser import *
+from urllib.parse import urlencode
+
+from pynanacolight.parser import InputTagParser, AnchorTagParser, BalanceParser
+
+import logging
+from logging import getLogger, StreamHandler, Formatter
+
+_LOGLEVEL = logging.DEBUG
+
+logger = getLogger(__name__)
+logger.setLevel(_LOGLEVEL)
+stream_handler = StreamHandler()
+stream_handler.setLevel(_LOGLEVEL)
+
+handler_format = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+stream_handler.setFormatter(handler_format)
+
+logger.addHandler(stream_handler)
+
+BASE_URL = 'https://www.nanaco-net.jp/pc/emServlet'
+REGISTER_GIFT_URL = 'https://nanacogift.jp/ap/p/top.do'
+REGISTER_GIFT_SUBMIT_URL = 'https://nanacogift.jp/ap/p/register2.do'
+REGISTER_GIFT_CONFIRM_URL = 'https://nanacogift.jp/ap/p/register4.do'
+
+ENCODING = 'shift_jis'
+
+DEFAULT_INPUT_DATA = [
+    "_PageID", "_DataStoreID", "_SeqNo", "_ControlID", "_WID", "_ORGWID", "_WIDManager", "_preProcess",
+    "_TimeOutControl", "_WIDMode", "_WindowName", "_ReturnPageInfo"]
 
 
-class BasePage:
-    _url = 'https://www.nanaco-net.jp/pc/emServlet'
-    parser = None
-    session = None
+class LoginPage:
+    def __init__(self, session: session()):
+        self._session = session
+        html = self._session.get(BASE_URL)
 
-    ENCODING = 'Shift_jis'
-
-    def __init__(self):
-        BasePage.session = session()
-        self.url_menu = ''
-        self.url_credit_charge_menu = ''
-        self.url_credit_charge = ''
-        self.url_credit_charge_history = ''
-        self.url_credit_charge_cancel = ''
-        self.can_credit_charge = False
-
-    @property
-    def url(self):
-        return self._url
-
-
-class LoginPage(BasePage):
-    def __init__(self):
-        super().__init__()
-        html = BasePage.session.get(self.url)
-        html.encoding = BasePage.ENCODING
-
-        self.parser = LoginPageParser()
-        self.parser.feed(html.text)
-
-    def input_nanaco_number(self, nanaco_number):
-        self.parser.input_nanaco_number(nanaco_number)
-
-    def input_card_number(self, card_number):
-        self.parser.input_card_number(card_number)
-
-    def click_login(self):
-        self.parser.click_login()
-
-        payload = self.parser.payload
-
-        html = self.session.post(self.url, payload)
-        html.encoding = BasePage.ENCODING
-
-        parser = MenuPageParser()
+        parser = InputTagParser()
         parser.feed(html.text)
 
-        BasePage.url_menu = parser.url_menu.replace('emServlet', self._url)
-        BasePage.url_credit_charge_menu = parser.url_credit_charge_menu.replace('emServlet', self._url)
+        names = DEFAULT_INPUT_DATA
+        self.data = {k: v for k, v in parser.data.items() if k in names}
 
-        return MenuPage()
+    def input_nanaco_number(self, nanaco_number):
+        data = {
+            "XCID": nanaco_number
+        }
+        self.data.update(data)
+
+        logger.info("input_nanaco_number: " + str(data))
+
+    def input_card_number(self, card_number):
+        data = {
+            "SECURITY_CD": card_number
+        }
+        self.data.update(data)
+
+        logger.info("input_card_number: " + str(data))
+
+    def click_login(self):
+        data = {
+            "ACT_ACBS_do_LOGIN2": ''
+        }
+        self.data.update(data)
+
+        url = BASE_URL
+        data = self.data
+
+        logger.info("click_login: " + str(data))
+
+        html = self._session.post(url, data)
+        html.encoding = ENCODING
+
+        return html
 
 
-class MenuPage(BasePage):
-    def __init__(self):
-        url = BasePage.url_menu
+class MenuPage:
+    _DATA_CREDIT_CHARGE_LOGIN = {
+        "_ActionID": 'ACBS_do_CRDT_TRADE_MENU',
+        "_ControlID": 'BS_PCB0000_Control',
+        "_PageID": 'SCBS_PCB8001'
+    }
 
-        html = BasePage.session.get(url)
-        html.encoding = BasePage.ENCODING
+    _DATA_REGISTER_GIFT = {
+        "_ActionID": 'ACBS_do_NNC_GIFT_REG',
+        "_ControlID": 'BS_PCB0000_Control',
+        "_PageID": 'SCBS_PCB1111'
+    }
 
-        self.parser = MenuPageParser()
-        self.parser.feed(html.text)
+    def __init__(self, session: session(), html):
+        self._session = session
+        self._html = html
 
-        self._balance_card = self.parser.balance_card
-        self._balnace_center = self.parser.balance_center
+        parser = AnchorTagParser()
+        parser.feed(html.text)
 
-    def login_credit_charge(self, password):
-        url = BasePage.url_credit_charge_menu
+        # prepare parameter
+        self.data = {}
+        self.data.update({"_SeqNo": parser.anchors[0]['_SeqNo'][0]})
+        self.data.update({"_WBSessionID": parser.anchors[0]['_WBSessionID'][0]})
+        self.data.update({"_DataStoreID": parser.anchors[0]['_DataStoreID'][0]})
 
-        html = BasePage.session.get(url)
-        html.encoding = BasePage.ENCODING
+        self._balance_card = None
+        self._balance_center = None
 
-        self.parser = CCPasswordAuthPageParser()
-        self.parser.feed(html.text)
+        self._read_balance(html)
 
-        # ページ入力操作
-        self.parser.input_credit_charge_password(password)
-        self.parser.click_next()
+    def _read_balance(self, html):
+        parser = BalanceParser()
+        parser.feed(html.text)
 
-        payload = self.parser.payload
+        self._balance_card = parser.amount[0]
+        self._balance_center = parser.amount[1]
 
-        html = self.session.post(self.url, payload)
-        html.encoding = BasePage.ENCODING
+    def click_login_credit_charge(self):
+        self.data.update(self.__class__._DATA_CREDIT_CHARGE_LOGIN)
 
-        self.parser = CCMenuPageParser()
-        self.parser.feed(html.text)
+        qs = urlencode(self.data)
+        url = BASE_URL + '?' + qs
 
-        try:
-            BasePage.url_credit_charge = self.parser._credit_charge_do_url.replace('emServlet', self._url)
-            BasePage.url_credit_charge_cancel = self.parser._credit_charge_cancel_url.replace('emServlet', self._url)
-            BasePage.url_credit_charge_history = self.parser._credit_charge_history_url.replace('emServlet', self._url)
+        logger.info("click_login_credit_charge: " + str(url))
 
-            BasePage.can_credit_charge = True
-            return CCMenuPage()
+        html = self._session.get(url)
+        html.encoding = ENCODING
 
-        except AttributeError:
-            return MenuPage()
+        return html
+
+    def click_register_gift(self):
+        self.data.update(self.__class__._DATA_REGISTER_GIFT)
+
+        qs = urlencode(self.data)
+        url = BASE_URL + '?' + qs
+
+        logger.info("click_register_gift: " + str(url))
+
+        html = self._session.get(url)
+        html.encoding = ENCODING
+
+        return html
 
     @property
-    def balance_card(self):
+    def text_balance_card(self):
         return self._balance_card
 
     @property
-    def balance_center(self):
-        return self._balnace_center
+    def text_balance_center(self):
+        return self._balance_center
 
 
-class CCHistoryPage(BasePage):
-    def __init__(self):
-        url = BasePage.url_credit_charge_history
+# Internal
+def _post(session: session(), url: str, data: dict):
+    html = session.post(url, data)
+    html.encoding = ENCODING
 
-        html = BasePage.session.get(url)
-        html.encoding = BasePage.ENCODING
-
-        self.parser = CCHistoryPageParser()
-        self.parser.feed(html.text)
-
-        self._registered_credit_card = self.parser.registered_credit_card
-        self._charge_count = self.parser.charge_count
-        self._charge_amount = self.parser.charge_amount
-
-    @property
-    def registered_credit_card(self):
-        return self._registered_credit_card if self._registered_credit_card else ''
-
-    @property
-    def charge_count(self):
-        return self._charge_count
-
-    @property
-    def charge_amount(self):
-        return self._charge_amount
-
-
-class CCMenuPage(BasePage):
-    def __init__(self):
-        url = BasePage.url_credit_charge_menu
-
-        html = BasePage.session.get(url)
-        html.encoding = BasePage.ENCODING
-
-        self.parser = CCMenuPageParser()
-        self.parser.feed(html.text)
-
-    def charge(self, amount):
-        url = BasePage.url_credit_charge
-
-        html = BasePage.session.get(url)
-        html.encoding = BasePage.ENCODING
-
-        self.parser = CCInputPageParser()
-        self.parser.feed(html.text)
-
-        # ページ入力操作
-        self.parser.input_charge_amount(amount)
-        self.parser.click_next()
-
-        payload = self.parser.payload
-
-        html = self.session.post(self.url, payload)
-        html.encoding = BasePage.ENCODING
-
-        self.parser = CCConfirmPageParser()
-        self.parser.feed(html.text)
-
-        # ページ入力操作
-        self.parser.click_confirm()
-
-        payload = self.parser.payload
-        self.session.post(self.url, payload)
-
-    def release(self, password):
-        html = self.session.get(self.url_credit_charge_cancel)
-
-        self.parser = CCCancelPageParser()
-        self.parser.feed(html.text)
-
-        # ページ入力操作
-        self.parser.input_credit_charge_password(password)
-        self.parser.click_next()
-
-        payload = self.parser.payload
-        html = self.session.post(self.url, payload)
-
-        self.parser = CCCancelConfirmPageParser()
-        self.parser.feed(html.text)
-
-        # ページ入力操作
-        self.parser.click_confirm()
-
-        payload = self.parser.payload
-        self.session.post(self.url, payload)
+    logger.info(str(url) + str(data))
+    return html
