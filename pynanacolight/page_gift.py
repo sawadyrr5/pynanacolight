@@ -4,51 +4,50 @@
 """
 from requests import session
 
+from pynanacolight.page import _post
 from pynanacolight.parser import InputTagParser
-from pynanacolight.page import ENCODING, logger
-
-
-REGISTER_GIFT_URL = 'https://nanacogift.jp/ap/p/top.do'
-REGISTER_GIFT_SUBMIT_URL = 'https://nanacogift.jp/ap/p/register2.do'
-REGISTER_GIFT_CONFIRM_URL = 'https://nanacogift.jp/ap/p/register4.do'
+from pynanacolight.util.logger import logging
 
 
 class RegisterGiftPage:
+    INPUT_DATA_NAMES = ["no", "date", "sig", "ver", "gid"]
+
+    URL = 'https://nanacogift.jp/ap/p/top.do'
 
     def __init__(self, session: session(), html):
         self._session = session
-        self._html = html
 
         parser = InputTagParser()
         parser.feed(html.text)
 
-        names = ["no", "date", "sig", "ver", "gid"]
-        self.data = {k: v for k, v in parser.data.items() if k in names}
+        wanted_keys = self.__class__.INPUT_DATA_NAMES
+        self.data = {k: v for k, v in parser.data.items() if k in wanted_keys}
 
+    @logging
     def click_accept(self):
-        url = REGISTER_GIFT_URL
-        data = self.data
-
-        logger.info("click accept: " + str(data))
-
-        html = self._session.post(url, data)
-        html.encoding = ENCODING
-
+        html = _post(
+            session=self._session,
+            url=self.__class__.URL,
+            data=self.data
+        )
         return html
 
 
 class RegisterGiftCodeInputPage:
+    INPUT_DATA_NAMES = ["vsid"]
+
+    URL = 'https://nanacogift.jp/ap/p/register2.do'
 
     def __init__(self, session: session(), html):
         self._session = session
-        self._html = html
 
         parser = InputTagParser()
         parser.feed(html.text)
 
-        names = ["vsid"]
-        self.data = {k: v for k, v in parser.data.items() if k in names}
+        wanted_keys = self.__class__.INPUT_DATA_NAMES
+        self.data = {k: v for k, v in parser.data.items() if k in wanted_keys}
 
+    @logging
     def input_code(self, code):
         data = {
             "id1": code[0: 4],
@@ -58,39 +57,35 @@ class RegisterGiftCodeInputPage:
         }
         self.data.update(data)
 
-        logger.info("input_charge_amount: " + str(data))
-
+    @logging
     def click_submit(self):
-        url = REGISTER_GIFT_SUBMIT_URL
-        data = self.data
-
-        logger.info("click_submit: " + str(data))
-
-        html = self._session.post(url, data)
-        html.encoding = ENCODING
-
+        html = _post(
+            session=self._session,
+            url=self.__class__.URL,
+            data=self.data
+        )
         return html
 
 
 class RegisterGiftCodeConfirmPage:
+    INPUT_DATA_NAMES = ["vsid"]
+
+    URL = 'https://nanacogift.jp/ap/p/register4.do'
 
     def __init__(self, session: session(), html):
         self._session = session
-        self._html = html
 
         parser = InputTagParser()
         parser.feed(html.text)
 
-        names = ["vsid"]
-        self.data = {k: v for k, v in parser.data.items() if k in names}
+        wanted_keys = self.__class__.INPUT_DATA_NAMES
+        self.data = {k: v for k, v in parser.data.items() if k in wanted_keys}
 
+    @logging
     def click_confirm(self):
-        url = REGISTER_GIFT_CONFIRM_URL
-        data = self.data
-
-        logger.info("click_confirm: " + str(data))
-
-        html = self._session.post(url, data)
-        html.encoding = ENCODING
-
+        html = _post(
+            session=self._session,
+            url=self.__class__.URL,
+            data=self.data
+        )
         return html

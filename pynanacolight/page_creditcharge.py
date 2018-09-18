@@ -3,73 +3,51 @@
 ページの抽象レベル操作を行う
 """
 from requests import session
-from urllib.parse import urlencode
 
-from pynanacolight.page import ENCODING, BASE_URL, DEFAULT_INPUT_DATA, logger
-from pynanacolight.parser import InputTagParser,AnchorTagParser,CreditChargeHistoryParser
+from pynanacolight.page import BASE_URL, DEFAULT_INPUT_DATA_NAMES, _get, _post
+from pynanacolight.parser import InputTagParser, AnchorTagParser, CreditChargeHistoryParser
+from pynanacolight.util.logger import logging
 
 
 class CreditChargePasswordAuthPage:
 
     def __init__(self, session: session(), html):
         self._session = session
-        self._html = html
 
         parser = InputTagParser()
         parser.feed(html.text)
 
-        names = DEFAULT_INPUT_DATA
-        names.append("_WBSessionID")
+        wanted_keys = DEFAULT_INPUT_DATA_NAMES + ["_WBSessionID"]
+        self.data = {k: v for k, v in parser.data.items() if k in wanted_keys}
 
-        self.data = {k: v for k, v in parser.data.items() if k in names}
-
+    @logging
     def input_credit_charge_password(self, password):
-        data = {
-            "CRDT_CHEG_PWD": password
-        }
-        self.data.update(data)
+        self.data.update(
+            {
+                "CRDT_CHEG_PWD": password
+            }
+        )
 
-        logger.info("input_credit_charge_password: " + str(data))
-
+    @logging
     def click_next(self):
-        data = {
-            "ACT_ACBS_do_CRDT_CHRG_PWD_AUTH": '次へ'
-        }
-        self.data.update(data)
+        self.data.update(
+            {
+                "ACT_ACBS_do_CRDT_CHRG_PWD_AUTH": '次へ'
+            }
+        )
 
-        url = BASE_URL
-        data = self.data
-
-        logger.info("click_next: " + str(url))
-
-        html = self._session.post(url, data)
-        html.encoding = ENCODING
-
+        html = _post(
+            session=self._session,
+            url=BASE_URL,
+            data=self.data
+        )
         return html
 
 
 class CreditChargeMenuPage:
-    _DATA_CHARGE = {
-        "_ActionID": 'ACBS_do_CRDT_CHRG',
-        "_ControlID": 'BS_PCB8001_Control',
-        "_PageID": 'SCBS_PCB8001'
-    }
-
-    _DATA_HISTORY = {
-        "_ActionID": 'ACBS_do_CRDT_TRADE_HISTORY_CONF',
-        "_ControlID": 'BS_PCB8001_Control',
-        "_PageID": 'SCBS_PCB8001'
-    }
-
-    _DATA_CANCEL = {
-        "_ActionID": 'ACBS_do_CRDT_CNCL',
-        "_ControlID": 'BS_PCB8001_Control',
-        "_PageID": 'SCBS_PCB8001'
-    }
 
     def __init__(self, session: session(), html):
         self._session = session
-        self._html = html
 
         parser = AnchorTagParser()
         parser.feed(html.text)
@@ -80,46 +58,55 @@ class CreditChargeMenuPage:
         self.data.update({"_WBSessionID": parser.anchors[0]['_WBSessionID'][0]})
         self.data.update({"_DataStoreID": parser.anchors[0]['_DataStoreID'][0]})
 
+    @logging
     def click_charge(self):
-        data = self.__class__._DATA_CHARGE
-        self.data.update(data)
+        self.data.update(
+            {
+                "_ActionID": 'ACBS_do_CRDT_CHRG',
+                "_ControlID": 'BS_PCB8001_Control',
+                "_PageID": 'SCBS_PCB8001'
+            }
+        )
 
-        qs = urlencode(self.data)
-        url = BASE_URL + '?' + qs
-
-        logger.info("click_charge: " + str(url))
-
-        html = self._session.get(url)
-        html.encoding = ENCODING
-
+        html = _get(
+            session=self._session,
+            url=BASE_URL,
+            param=self.data
+        )
         return html
 
+    @logging
     def click_history(self):
-        data = self.__class__._DATA_HISTORY
-        self.data.update(data)
+        self.data.update(
+            {
+                "_ActionID": 'ACBS_do_CRDT_TRADE_HISTORY_CONF',
+                "_ControlID": 'BS_PCB8001_Control',
+                "_PageID": 'SCBS_PCB8001'
+            }
+        )
 
-        qs = urlencode(self.data)
-        url = BASE_URL + '?' + qs
-
-        logger.info("click_history: " + str(url))
-
-        html = self._session.get(url)
-        html.encoding = ENCODING
-
+        html = _get(
+            session=self._session,
+            url=BASE_URL,
+            param=self.data
+        )
         return html
 
+    @logging
     def click_cancel(self):
-        data = self.__class__._DATA_CANCEL
-        self.data.update(data)
+        self.data.update(
+            {
+                "_ActionID": 'ACBS_do_CRDT_CNCL',
+                "_ControlID": 'BS_PCB8001_Control',
+                "_PageID": 'SCBS_PCB8001'
+            }
+        )
 
-        qs = urlencode(self.data)
-        url = BASE_URL + '?' + qs
-
-        logger.info("click_cancel: " + str(url))
-
-        html = self._session.get(url)
-        html.encoding = ENCODING
-
+        html = _get(
+            session=self._session,
+            url=BASE_URL,
+            param=self.data
+        )
         return html
 
 
@@ -132,12 +119,13 @@ class CreditChargeHistoryPage:
         self._charge_count = None
         self._charge_amount = None
 
+        # read credit charge information.
         parser = CreditChargeHistoryParser()
         parser.feed(html.text)
 
         self._registered_credit_card = parser.registered_credit_card
         self._charge_count = parser.charge_count
-        self._charge_amount = parser.charge_amount
+        self._charge_amount = parser.charge_amount[0]
 
     @property
     def text_registered_credit_card(self):
@@ -161,33 +149,30 @@ class CreditChargeInputPage:
         parser = InputTagParser()
         parser.feed(html.text)
 
-        names = DEFAULT_INPUT_DATA
-        names.append("_WBSessionID")
+        wanted_keys = DEFAULT_INPUT_DATA_NAMES + ["_WBSessionID"]
+        self.data = {k: v for k, v in parser.data.items() if k in wanted_keys}
 
-        self.data = {k: v for k, v in parser.data.items() if k in names}
-
+    @logging
     def input_charge_amount(self, amount):
-        data = {
-            "AMT": amount
-        }
-        self.data.update(data)
+        self.data.update(
+            {
+                "AMT": amount
+            }
+        )
 
-        logger.info("input_charge_amount: " + str(data))
-
+    @logging
     def click_next(self):
-        data = {
-            "ACT_ACBS_do_CRDT_CHRG_INPUT": '次へ'
-        }
-        self.data.update(data)
+        self.data.update(
+            {
+                "ACT_ACBS_do_CRDT_CHRG_INPUT": '次へ'
+            }
+        )
 
-        url = BASE_URL
-        data = self.data
-
-        logger.info("click_next: " + str(data))
-
-        html = self._session.post(url, data)
-        html.encoding = ENCODING
-
+        html = _post(
+            session=self._session,
+            url=BASE_URL,
+            data=self.data
+        )
         return html
 
 
@@ -199,26 +184,22 @@ class CreditChargeConfirmPage:
         parser = InputTagParser()
         parser.feed(html.text)
 
-        names = DEFAULT_INPUT_DATA
-        names.append("_WBSessionID")
-        names.append("SESSION_ID")
+        wanted_keys = DEFAULT_INPUT_DATA_NAMES + ["_WBSessionID", "SESSION_ID"]
+        self.data = {k: v for k, v in parser.data.items() if k in wanted_keys}
 
-        self.data = {k: v for k, v in parser.data.items() if k in names}
-
+    @logging
     def click_confirm(self):
-        data = {
-            "ACT_ACBS_do_CRDT_CHRG_CONF": '申込み'
-        }
-        self.data.update(data)
+        self.data.update(
+            {
+                "ACT_ACBS_do_CRDT_CHRG_CONF": '申込み'
+            }
+        )
 
-        url = BASE_URL
-        data = self.data
-
-        logger.info("click confirm: " + str(data))
-
-        html = self._session.post(url, data)
-        html.encoding = ENCODING
-
+        html = _post(
+            session=self._session,
+            url=BASE_URL,
+            data=self.data
+        )
         return html
 
 
@@ -230,33 +211,30 @@ class CreditChargeCancelPage:
         parser = InputTagParser()
         parser.feed(html.text)
 
-        names = DEFAULT_INPUT_DATA
-        names.append("_WBSessionID")
+        wanted_keys = DEFAULT_INPUT_DATA_NAMES + ["_WBSessionID"]
+        self.data = {k: v for k, v in parser.data.items() if k in wanted_keys}
 
-        self.data = {k: v for k, v in parser.data.items() if k in names}
-
+    @logging
     def input_credit_charge_password(self, password):
-        data = {
-            "CRDT_CHEG_PWD": password
-        }
-        self.data.update(data)
+        self.data.update(
+            {
+                "CRDT_CHEG_PWD": password
+            }
+        )
 
-        logger.info("input_credit_charge_password: " + str(data))
-
+    @logging
     def click_next(self):
-        data = {
-            "ACT_ACBS_do_CRDT_CNCL_INPUT": '解約確認画面へ'
-        }
-        self.data.update(data)
+        self.data.update(
+            {
+                "ACT_ACBS_do_CRDT_CNCL_INPUT": '解約確認画面へ'
+            }
+        )
 
-        url = BASE_URL
-        data = self.data
-
-        logger.info("click_next: " + str(data))
-
-        html = self._session.post(url, data)
-        html.encoding = ENCODING
-
+        html = _post(
+            session=self._session,
+            url=BASE_URL,
+            data=self.data
+        )
         return html
 
 
@@ -268,23 +246,20 @@ class CreditChargeCancelConfirmPage:
         parser = InputTagParser()
         parser.feed(html.text)
 
-        names = DEFAULT_INPUT_DATA
-        names.append("_WBSessionID")
+        wanted_keys = DEFAULT_INPUT_DATA_NAMES + ["_WBSessionID"]
+        self.data = {k: v for k, v in parser.data.items() if k in wanted_keys}
 
-        self.data = {k: v for k, v in parser.data.items() if k in names}
-
+    @logging
     def click_confirm(self):
-        data = {
-            "ACT_ACBS_do_CRDT_CNCL_CONF": ''
-        }
-        self.data.update(data)
+        self.data.update(
+            {
+                "ACT_ACBS_do_CRDT_CNCL_CONF": ''
+            }
+        )
 
-        url = BASE_URL
-        data = self.data
-
-        logger.info("click_confirm: " + str(data))
-
-        html = self._session.post(url, data)
-        html.encoding = ENCODING
-
+        html = _post(
+            session=self._session,
+            url=BASE_URL,
+            data=self.data
+        )
         return html

@@ -16,7 +16,6 @@ class InputTagParser(HTMLParser):
     def handle_starttag(self, tag, attrs):
 
         if tag == 'input':
-
             dict_attrs = dict(attrs)
 
             if dict_attrs.keys() >= {'name', 'value'}:
@@ -38,11 +37,9 @@ class AnchorTagParser(HTMLParser):
     def handle_starttag(self, tag, attrs):
 
         if tag == 'a':
-
             dict_attrs = dict(attrs)
 
             if 'href' in dict_attrs.keys():
-
                 qs = dict_attrs['href']
                 qs = qs.replace('emServlet?', '')
 
@@ -60,10 +57,17 @@ class BalanceParser(HTMLParser):
         super().__init__()
         self.amount = []
 
+        self.balance_card = None
+        self.balance_center = None
+
     def handle_data(self, data):
         if self.lasttag == 'p' and '円' in data:
             data = data.replace('円', '').replace(',', '')
             self.amount.append(data)
+
+            if len(self.amount) == 2:
+                self.balance_card = self.amount[0]
+                self.balance_center = self.amount[1]
 
     def error(self, message):
         pass
@@ -74,19 +78,26 @@ class CreditChargeHistoryParser(HTMLParser):
 
     def __init__(self):
         super().__init__()
-        self.registered_credit_card = ''
-        self.charge_count = ''
-        self.charge_amount = []
+        self.registered_credit_card = None
+        self.charge_count = None
+        self._charge_amount = []
+        self.charge_amount = None
 
     def handle_data(self, data):
         if self.lasttag == 'p' and '登録クレジットカード：' in data:
+            data = data.replace('登録クレジットカード：', '')
             self.registered_credit_card = data
 
         if self.lasttag == 'td' and '回' in data:
+            data = data.replace('回', '')
             self.charge_count = data
 
         if self.lasttag == 'td' and '円' in data:
-            self.charge_amount.append(data)
+            data = data.replace('円', '').replace(',', '')
+            self._charge_amount.append(data)
+
+            if len(self._charge_amount) > 1:
+                self.charge_amount = self._charge_amount[1]
 
     def error(self, message):
         pass
