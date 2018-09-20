@@ -4,15 +4,14 @@ from pynanacolight.page_creditcharge import CreditChargeMenuPage, CreditChargeHi
     CreditChargeInputPage, CreditChargeConfirmPage, CreditChargeCancelPage, CreditChargeCancelConfirmPage
 from pynanacolight.page_gift import RegisterGiftPage, RegisterGiftCodeInputPage, RegisterGiftCodeConfirmPage
 
-from pynanacolight.util.logger import logging
-
 from requests import session
+
 
 class PyNanacoLight:
     def __init__(self, session: session()):
         self._session = session
 
-        self.html = None
+        self._html = None
 
         self.balance_card = None
         self.balance_center = None
@@ -23,29 +22,36 @@ class PyNanacoLight:
         self.charge_count = None
         self.charge_amount = None
 
-    def login(self, nanaco_number, card_number):
+    def login(self, nanaco_number, card_number=None, password=None):
         page = LoginPage(self._session)
 
         page.input_nanaco_number(nanaco_number)
-        page.input_card_number(card_number)
 
-        self.html = page.click_login()
+        if card_number:
+            page.input_card_number(card_number)
+            self._html = page.click_login_by_card_number()
+        elif password:
+            page.input_password(password)
+            self._html = page.click_login_by_password()
+        else:
+            return
 
-        page = MenuPage(self._session, self.html)
+
+        page = MenuPage(self._session, self._html)
         self.balance_card = page.text_balance_card
         self.balance_center = page.text_balance_center
 
     def login_credit_charge(self, password):
         self.credit_charge_password = password
 
-        page = MenuPage(self._session, self.html)
-        self.html = page.click_login_credit_charge()
+        page = MenuPage(self._session, self._html)
+        self._html = page.click_login_credit_charge()
 
-        page = CreditChargePasswordAuthPage(self._session, self.html)
+        page = CreditChargePasswordAuthPage(self._session, self._html)
         page.input_credit_charge_password(password)
-        self.html = page.click_next()
+        self._html = page.click_next()
 
-        page = CreditChargeMenuPage(self._session, self.html)
+        page = CreditChargeMenuPage(self._session, self._html)
         html = page.click_history()
 
         page = CreditChargeHistoryPage(self._session, html)
@@ -54,37 +60,37 @@ class PyNanacoLight:
         self.charge_amount = page.text_charge_amount
 
     def charge(self, value: int):
-        page = CreditChargeMenuPage(self._session, self.html)
-        self.html = page.click_charge()
+        page = CreditChargeMenuPage(self._session, self._html)
+        self._html = page.click_charge()
 
-        page = CreditChargeInputPage(self._session, self.html)
+        page = CreditChargeInputPage(self._session, self._html)
         page.input_charge_amount(value)
-        self.html = page.click_next()
+        self._html = page.click_next()
 
-        page = CreditChargeConfirmPage(self._session, self.html)
-        self.html = page.click_confirm()
+        page = CreditChargeConfirmPage(self._session, self._html)
+        self._html = page.click_confirm()
 
     def cancel(self, password):
-        page = CreditChargeMenuPage(self._session, self.html)
-        self.html = page.click_cancel()
+        page = CreditChargeMenuPage(self._session, self._html)
+        self._html = page.click_cancel()
 
-        page = CreditChargeCancelPage(self._session, self.html)
+        page = CreditChargeCancelPage(self._session, self._html)
         page.input_credit_charge_password(password)
-        self.html = page.click_next()
+        self._html = page.click_next()
 
-        page = CreditChargeCancelConfirmPage(self._session, self.html)
-        self.html = page.click_confirm()
+        page = CreditChargeCancelConfirmPage(self._session, self._html)
+        self._html = page.click_confirm()
 
     def register_giftcode(self, code):
-        page = MenuPage(self._session, self.html)
-        self.html = page.click_register_gift()
+        page = MenuPage(self._session, self._html)
+        self._html = page.click_register_gift()
 
-        page = RegisterGiftPage(self._session, self.html)
-        self.html = page.click_accept()
+        page = RegisterGiftPage(self._session, self._html)
+        self._html = page.click_accept()
 
-        page = RegisterGiftCodeInputPage(self._session, self.html)
+        page = RegisterGiftCodeInputPage(self._session, self._html)
         page.input_code(code)
-        self.html = page.click_submit()
+        self._html = page.click_submit()
 
-        page = RegisterGiftCodeConfirmPage(self._session, self.html)
-        self.html = page.click_confirm()
+        page = RegisterGiftCodeConfirmPage(self._session, self._html)
+        self._html = page.click_confirm()

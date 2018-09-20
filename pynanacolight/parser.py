@@ -66,8 +66,8 @@ class BalanceParser(HTMLParser):
             self.amount.append(data)
 
             if len(self.amount) == 2:
-                self.balance_card = self.amount[0]
-                self.balance_center = self.amount[1]
+                self.balance_card = int(self.amount[0])
+                self.balance_center = int(self.amount[1])
 
     def error(self, message):
         pass
@@ -79,6 +79,7 @@ class CreditChargeHistoryParser(HTMLParser):
     def __init__(self):
         super().__init__()
         self.registered_credit_card = None
+        self._charge_count = []
         self.charge_count = None
         self._charge_amount = []
         self.charge_amount = None
@@ -90,14 +91,17 @@ class CreditChargeHistoryParser(HTMLParser):
 
         if self.lasttag == 'td' and '回' in data:
             data = data.replace('回', '')
-            self.charge_count = data
+            self._charge_count.append(data)
+
+            if len(self._charge_count) > 1:
+                self.charge_count = int(self._charge_count[1])
 
         if self.lasttag == 'td' and '円' in data:
             data = data.replace('円', '').replace(',', '')
             self._charge_amount.append(data)
 
             if len(self._charge_amount) > 1:
-                self.charge_amount = self._charge_amount[1]
+                self.charge_amount = int(self._charge_amount[1])
 
     def error(self, message):
         pass

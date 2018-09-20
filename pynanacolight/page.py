@@ -6,7 +6,7 @@ from requests import session
 from urllib.parse import urlencode
 
 from pynanacolight.parser import InputTagParser, AnchorTagParser, BalanceParser
-from pynanacolight.util.logger import logging
+from pynanacolight.util import logging
 
 BASE_URL = 'https://www.nanaco-net.jp/pc/emServlet'
 
@@ -62,7 +62,15 @@ class LoginPage:
         )
 
     @logging
-    def click_login(self):
+    def input_password(self, password):
+        self.data.update(
+            {
+                "LOGIN_PWD": password
+            }
+        )
+
+    @logging
+    def click_login_by_card_number(self):
         self.data.update(
             {
                 "ACT_ACBS_do_LOGIN2": ''
@@ -76,6 +84,21 @@ class LoginPage:
         )
         return html
 
+
+    @logging
+    def click_login_by_password(self):
+        self.data.update(
+            {
+                "ACT_ACBS_do_LOGIN1": ''
+            }
+        )
+
+        html = _post(
+            session=self._session,
+            url=BASE_URL,
+            data=self.data
+        )
+        return html
 
 class MenuPage:
 

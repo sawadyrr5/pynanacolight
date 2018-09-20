@@ -6,7 +6,7 @@ from requests import session
 
 from pynanacolight.page import _post
 from pynanacolight.parser import InputTagParser
-from pynanacolight.util.logger import logging
+from pynanacolight.util import logging
 
 
 class RegisterGiftPage:

@@ -4,3 +4,4 @@ from pynanacolight.page_creditcharge import CreditChargeMenuPage, CreditChargeHi
     CreditChargeInputPage, CreditChargeConfirmPage, CreditChargeCancelPage, CreditChargeCancelConfirmPage
 from pynanacolight.page_gift import RegisterGiftPage, RegisterGiftCodeInputPage, RegisterGiftCodeConfirmPage
 from pynanacolight.parser import AnchorTagParser, BalanceParser, InputTagParser, CreditChargeHistoryParser
+from pynanacolight.util import logging

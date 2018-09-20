@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import logging
 from logging import getLogger, StreamHandler, Formatter
+from pynanacolight.parser import InputTagParser
+from requests import session
 
 LOG_LEVEL = logging.DEBUG
 
@@ -22,3 +24,10 @@ def logging(func):
         res = func(*args, **kwargs)
         return res
     return wrapper
+
+
+def analyze(url):
+    s = session()
+    html = s.get(url=url)
+    parser = InputTagParser()
+    parser.feed(html.text)

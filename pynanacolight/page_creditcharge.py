@@ -6,7 +6,7 @@ from requests import session
 
 from pynanacolight.page import BASE_URL, DEFAULT_INPUT_DATA_NAMES, _get, _post
 from pynanacolight.parser import InputTagParser, AnchorTagParser, CreditChargeHistoryParser
-from pynanacolight.util.logger import logging
+from pynanacolight.util import logging
 
 
 class CreditChargePasswordAuthPage:
@@ -125,7 +125,7 @@ class CreditChargeHistoryPage:
 
         self._registered_credit_card = parser.registered_credit_card
         self._charge_count = parser.charge_count
-        self._charge_amount = parser.charge_amount[0]
+        self._charge_amount = parser.charge_amount
 
     @property
     def text_registered_credit_card(self):
