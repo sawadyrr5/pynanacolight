@@ -1,0 +1,18 @@
+[metadata]
+name = PyNanacoLight
+version = 0.2.0
+url = https://github.com/sawadyrr5/PyNanacoPyNanacoLight
+author = sawady
+author_email = riskreturn5@gmail.com
+license = file: LICENSE
+description = Operating nanaco (electric money) via python.
+long_description = file: README.md
+classifiers =
+    Programming Language :: Python :: 3
+    Programming Language :: Python :: 3.5
+
+[options]
+install_requires =
+    requests
+zip_safe = False
+packages = find:
