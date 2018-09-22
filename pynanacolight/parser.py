@@ -105,3 +105,18 @@ class CreditChargeHistoryParser(HTMLParser):
 
     def error(self, message):
         pass
+
+
+# Internal -- parse <title> tag
+class TitleParser(HTMLParser):
+
+    def __init__(self):
+        super().__init__()
+        self.title = ''
+
+    def handle_data(self, data):
+        if self.lasttag == 'title' and self.title == '':
+            self.title = data
+
+    def error(self, message):
+        pass

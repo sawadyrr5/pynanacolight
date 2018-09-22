@@ -5,7 +5,7 @@
 from requests import session
 from urllib.parse import urlencode
 
-from pynanacolight.parser import InputTagParser, AnchorTagParser, BalanceParser
+from pynanacolight.parser import InputTagParser, AnchorTagParser, BalanceParser, TitleParser
 from pynanacolight.util import logging
 
 BASE_URL = 'https://www.nanaco-net.jp/pc/emServlet'
@@ -84,7 +84,6 @@ class LoginPage:
         )
         return html
 
-
     @logging
     def click_login_by_password(self):
         self.data.update(
@@ -99,6 +98,7 @@ class LoginPage:
             data=self.data
         )
         return html
+
 
 class MenuPage:
 
@@ -124,6 +124,8 @@ class MenuPage:
         self._balance_card = parser.balance_card
         self._balance_center = parser.balance_center
 
+        self._can_credit_charge = None
+
     @logging
     def click_login_credit_charge(self):
         self.data.update(
@@ -139,6 +141,15 @@ class MenuPage:
             url=BASE_URL,
             param=self.data
         )
+
+        parser = TitleParser()
+        parser.feed(html.text)
+
+        if parser.title == 'nanaco / クレジットチャージ　パスワード認証画面':
+            self._can_credit_charge = True
+        elif parser.title == 'nanaco / クレジットチャージ・オートチャージのご案内':
+            self._can_credit_charge = False
+
         return html
 
     @logging
@@ -165,3 +176,7 @@ class MenuPage:
     @property
     def text_balance_center(self):
         return self._balance_center
+
+    @property
+    def can_credit_charge(self):
+        return self._can_credit_charge
