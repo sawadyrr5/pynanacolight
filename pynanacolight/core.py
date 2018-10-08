@@ -10,8 +10,10 @@ from requests import session
 
 
 class PyNanacoLight:
-    def __init__(self, session: session()):
-        self._session = session
+    def __init__(self, _session: session()=None):
+        if _session is None:
+            _session = session()
+        self._session = _session
 
         self._html = None
 
