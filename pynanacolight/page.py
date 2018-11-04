@@ -180,3 +180,7 @@ class MenuPage:
     @property
     def can_credit_charge(self):
         return self._can_credit_charge
+
+
+class PyNanacoException(Exception):
+    """エラー基底クラス"""

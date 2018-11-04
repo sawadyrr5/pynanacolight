@@ -4,8 +4,8 @@
 """
 from requests import session
 
-from pynanacolight.page import _post
-from pynanacolight.parser import InputTagParser
+from pynanacolight.page import _post, PyNanacoException
+from pynanacolight.parser import InputTagParser, GiftAmountParser
 from pynanacolight.util import logging
 
 
@@ -81,6 +81,29 @@ class RegisterGiftCodeConfirmPage:
         wanted_keys = self.__class__.INPUT_DATA_NAMES
         self.data = {k: v for k, v in parser.data.items() if k in wanted_keys}
 
+        parser = GiftAmountParser()
+        parser.feed(html.text)
+
+        # 無効ギフトコードまたは別カードに登録済みの場合はgift_amountを取得できない
+        if parser.gift_amount is None:
+            raise InvalidGiftcodeException()
+
+        self._gift_amount = parser.gift_amount
+        self._gift_has_registered = parser.gift_has_registered
+        self._gift_receivable_date = parser.gift_receivable_date
+
+    @property
+    def gift_amount(self):
+        return self._gift_amount
+
+    @property
+    def gift_has_registered(self):
+        return self._gift_has_registered
+
+    @property
+    def gift_receivable_date(self):
+        return self._gift_receivable_date
+
     @logging
     def click_confirm(self):
         html = _post(
@@ -89,3 +112,7 @@ class RegisterGiftCodeConfirmPage:
             data=self.data
         )
         return html
+
+
+class InvalidGiftcodeException(PyNanacoException):
+    """ギフトコード無効エラー"""
