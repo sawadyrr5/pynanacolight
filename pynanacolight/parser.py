@@ -1,245 +1,122 @@
 # -*- coding: utf-8 -*-
+"""
+ページの要素レベル操作を行う
+"""
 from html.parser import HTMLParser
+from urllib.parse import parse_qs
 
 
-class BasePageParser(HTMLParser):
+# Internal -- parse all <INPUT> tags, and return dictionary object.
+class InputTagParser(HTMLParser):
+
     def __init__(self):
         super().__init__()
-        self._payload = {}
-        self._payload_keys = [
-            "_PageID",
-            "_DataStoreID",
-            "_SeqNo",
-            "_ControlID",
-            "_WID",
-            "_ORGWID",
-            "_WIDManager",
-            "_preProcess",
-            "_TimeOutControl",
-            "_WIDMode",
-            "_WindowName",
-            "_ReturnPageInfo"
-        ]
-
-    def feed(self, data):
-        super().feed(data)
+        self.data = {}
 
     def handle_starttag(self, tag, attrs):
+
         if tag == 'input':
-            tmp = dict(attrs)
-            if tmp['name'] in self._payload_keys:
-                self._payload.update(
-                    {
-                        tmp['name']: tmp['value']
-                    }
-                )
+            dict_attrs = dict(attrs)
 
-    @property
-    def payload(self):
-        return self._payload
+            if dict_attrs.keys() >= {'name', 'value'}:
+                item = {dict_attrs['name']: dict_attrs['value']}
+
+                self.data.update(item)
+
+    def error(self, message):
+        pass
 
 
-class LoginPageParser(BasePageParser):
-    def input_nanaco_number(self, nanaco_number):
-        self._payload["XCID"] = nanaco_number
+# Internal -- parse all <A> tags, and return list of href attribute.
+class AnchorTagParser(HTMLParser):
 
-    def input_card_number(self, card_number):
-        self._payload["SECURITY_CD"] = card_number
-
-    def click_login(self):
-        self._payload["ACT_ACBS_do_LOGIN2"] = ''
-
-    @property
-    def payload(self):
-        return super().payload
-
-
-class MenuPageParser(BasePageParser):
     def __init__(self):
         super().__init__()
-        self._charge_amount = []
-        self.url_menu = ''
-        self.url_credit_charge_menu = ''
+        self.anchors = []
 
     def handle_starttag(self, tag, attrs):
-        if tag == 'a':
-            for attr in attrs:
-                if attr[0] == 'href' and '_ActionID=ACBS_do_MEMBER_MENU' in attr[1]:
-                    self.url_menu = attr[1]
 
-                if attr[0] == 'href' and '_ActionID=ACBS_do_CRDT_TRADE_MENU' in attr[1]:
-                    self.url_credit_charge_menu = attr[1]
+        if tag == 'a':
+            dict_attrs = dict(attrs)
+
+            if 'href' in dict_attrs.keys():
+                qs = dict_attrs['href']
+                qs = qs.replace('emServlet?', '')
+
+                if '_ActionID' in qs:
+                    self.anchors.append(parse_qs(qs))
+
+    def error(self, message):
+        pass
+
+
+# Internal -- parse menu page <P> tags.
+class BalanceParser(HTMLParser):
+
+    def __init__(self):
+        super().__init__()
+        self.amount = []
+
+        self.balance_card = None
+        self.balance_center = None
 
     def handle_data(self, data):
         if self.lasttag == 'p' and '円' in data:
-            self._charge_amount.append(data)
+            data = data.replace('円', '').replace(',', '')
+            self.amount.append(data)
 
-    @property
-    def payload(self):
-        # self._payload = super().payload
-        # return self._payload
-        return super().payload
+            if len(self.amount) == 2:
+                self.balance_card = int(self.amount[0])
+                self.balance_center = int(self.amount[1])
 
-    @property
-    def balance_card(self):
-        return self._charge_amount[0].replace('円', '').replace(',', '')
-
-    @property
-    def balance_center(self):
-        return self._charge_amount[1].replace('円', '').replace(',', '')
+    def error(self, message):
+        pass
 
 
-class CCPasswordAuthPageParser(BasePageParser):
-    def input_credit_charge_password(self, password):
-        self._payload["CRDT_CHEG_PWD"] = password
+# Internal -- parse credit charge history page tags.
+class CreditChargeHistoryParser(HTMLParser):
 
-    def click_next(self):
-        self._payload["ACT_ACBS_do_CRDT_CHRG_PWD_AUTH"] = '次へ'
-
-    @property
-    def payload(self):
-        return super().payload
-
-
-class CCMenuPageParser(BasePageParser):
     def __init__(self):
         super().__init__()
-        self._credit_charge_menu_url = None
-        self._credit_charge_do_url = None
-        self._credit_charge_history_url = None
-        self._credit_charge_cancel_url = None
-
-    def handle_starttag(self, tag, attrs):
-        if tag == 'a':
-            for attr in attrs:
-                if attr[0] == 'href' and '_ActionID=ACBS_do_CRDT_CHRG' in attr[1]:
-                    self._credit_charge_do_url = attr[1]
-                elif attr[0] == 'href' and '_ActionID=ACBS_do_CRDT_TRADE_HISTORY_CONF' in attr[1]:
-                    self._credit_charge_history_url = attr[1]
-                elif attr[0] == 'href' and '_ActionID=ACBS_do_CRDT_CNCL' in attr[1]:
-                    self._credit_charge_cancel_url = attr[1]
-
-    @property
-    def credit_charge_do_url(self):
-        return self._credit_charge_do_url
-
-    @property
-    def credit_charge_history_url(self):
-        return self._credit_charge_history_url
-
-    @property
-    def credit_charge_cancel_url(self):
-        return self._credit_charge_cancel_url
-
-    @property
-    def payload(self):
-        return super().payload
-
-
-class CCHistoryPageParser(BasePageParser):
-    def __init__(self):
-        super().__init__()
-        self._credit_charge_menu_url = None
-        self._registered_credit_card = None
-        self._charge_count = None
+        self.registered_credit_card = None
+        self._charge_count = []
+        self.charge_count = None
         self._charge_amount = []
+        self.charge_amount = None
 
     def handle_data(self, data):
         if self.lasttag == 'p' and '登録クレジットカード：' in data:
-            self._registered_credit_card = data
+            data = data.replace('登録クレジットカード：', '')
+            self.registered_credit_card = data
 
         if self.lasttag == 'td' and '回' in data:
-            self._charge_count = data
+            data = data.replace('回', '')
+            self._charge_count.append(data)
+
+            if len(self._charge_count) > 1:
+                self.charge_count = int(self._charge_count[1])
 
         if self.lasttag == 'td' and '円' in data:
+            data = data.replace('円', '').replace(',', '')
             self._charge_amount.append(data)
 
-    def handle_starttag(self, tag, attrs):
-        if tag == 'a':
-            for attr in attrs:
-                if attr[0] == 'href' and '_ActionID=ACBS_do_CRDT_TRADE_MENU' in attr[1]:
-                    self._credit_charge_menu_url = attr[1]
+            if len(self._charge_amount) > 1:
+                self.charge_amount = int(self._charge_amount[1])
 
-    @property
-    def credit_charge_menu_url(self):
-        return self._credit_charge_menu_url
-
-    @property
-    def registered_credit_card(self):
-        return self._registered_credit_card.replace('登録クレジットカード：', '')
-
-    @property
-    def charge_count(self):
-        return self._charge_count.replace('回', '')
-
-    @property
-    def charge_amount(self):
-        return self._charge_amount[1].replace('円', '').replace(',', '') if self._charge_amount else None
+    def error(self, message):
+        pass
 
 
-class CCInputPageParser(BasePageParser):
+# Internal -- parse <title> tag
+class TitleParser(HTMLParser):
+
     def __init__(self):
         super().__init__()
-        self._payload = super().payload
-        self._payload_keys.append("_WBSessionID")
+        self.title = ''
 
-    def input_charge_amount(self, amount):
-        self._payload["AMT"] = amount
+    def handle_data(self, data):
+        if self.lasttag == 'title' and self.title == '':
+            self.title = data
 
-    def click_next(self):
-        self._payload["ACT_ACBS_do_CRDT_CHRG_INPUT"] = '次へ'
-
-    @property
-    def payload(self):
-        return super().payload
-
-
-class CCConfirmPageParser(BasePageParser):
-    def __init__(self):
-        super().__init__()
-        self._payload = super().payload
-        self._payload_keys.append("_WBSessionID")
-        self._payload_keys.append("SESSION_ID")
-
-    def click_confirm(self):
-        self._payload["ACT_ACBS_do_CRDT_CHRG_CONF"] = '申込み'
-
-    @property
-    def payload(self):
-        # self._payload = super().payload
-        # return self._payload
-        return super().payload
-
-
-class CCCancelPageParser(BasePageParser):
-    def __init__(self):
-        super().__init__()
-        self._payload = super().payload
-        self._payload_keys.append("_WBSessionID")
-
-    def input_credit_charge_password(self, password):
-        self._payload["CRDT_CHEG_PWD"] = password
-
-    def click_next(self):
-        self._payload["ACT_ACBS_do_CRDT_CNCL_INPUT"] = '解約確認画面へ'
-
-    @property
-    def payload(self):
-        return super().payload
-
-
-class CCCancelConfirmPageParser(BasePageParser):
-    def __init__(self):
-        super().__init__()
-        self._payload = super().payload
-        self._payload_keys.append("_WBSessionID")
-
-    def input_credit_charge_password(self, password):
-        self._payload["CRDT_CHEG_PWD"] = password
-
-    def click_confirm(self):
-        self._payload["ACT_ACBS_do_CRDT_CNCL_CONF"] = ''
-
-    @property
-    def payload(self):
-        return super().payload
+    def error(self, message):
+        pass

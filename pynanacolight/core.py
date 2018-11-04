@@ -1,111 +1,148 @@
 # -*- coding: utf-8 -*-
-from pynanacolight.page import *
+from pynanacolight.page import LoginPage, MenuPage
+from pynanacolight.page_creditcharge import CreditChargeMenuPage, CreditChargeHistoryPage, CreditChargePasswordAuthPage, \
+    CreditChargeInputPage, CreditChargeConfirmPage, CreditChargeCancelPage, CreditChargeCancelConfirmPage
+    # CreditChargeRegisterGuidePage, CreditChargeRegisterAgreePage, CreditChargeRegisterInputPage1, \
+    # CreditChargeRegisterInputPage2, CreditChargeRegisterConfirmPage
+from pynanacolight.page_gift import RegisterGiftPage, RegisterGiftCodeInputPage, RegisterGiftCodeConfirmPage
 
-import logging
-from logging import getLogger, StreamHandler, Formatter
-
-logger = getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-stream_handler = StreamHandler()
-stream_handler.setLevel(logging.DEBUG)
-
-handler_format = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-stream_handler.setFormatter(handler_format)
-
-logger.addHandler(stream_handler)
+from requests import session
 
 
-class Nanaco:
-    def __init__(self):
-        self._nanaco_number = None
-        self._card_number = None
+class PyNanacoLight:
+    def __init__(self, _session: session()=None):
+        if _session is None:
+            _session = session()
+        self._session = _session
 
-        self._balance_card = None
-        self._balance_center = None
+        self._html = None
 
-        self._credit_charge_password = None
+        self.balance_card = None
+        self.balance_center = None
 
-        self._registerd_credit_card = None
-        self._charge_count = None
-        self._charge_amount = None
+        self.can_credit_charge = None
 
-        self.page = None
+        self.credit_charge_password = ''
 
-    def login(self, nanaco_number, card_number):
-        self._nanaco_number = nanaco_number
-        self._card_number = card_number
+        self.registered_creditcard = ''
+        self.charge_count = None
+        self.charge_amount = None
 
-        self.page = LoginPage()
-        self.page.input_nanaco_number(nanaco_number)
-        self.page.input_card_number(card_number)
-        self.page = self.page.click_login()
+    def login(self, nanaco_number:str, card_number:str=None, password:str=None):
+        page = LoginPage(self._session)
 
-        logger.info("login: " + nanaco_number + " " + card_number)
+        page.input_nanaco_number(nanaco_number)
 
-        self._balance_card = self.page.balance_card
-        self._balance_center = self.page.balance_center
+        if card_number:
+            page.input_card_number(card_number)
+            self._html = page.click_login_by_card_number()
 
-        logger.info("balance_card: " + self.balance_card)
-        logger.info("balance_center: " + self.balance_center)
+        elif password:
+            page.input_password(password)
+            self._html = page.click_login_by_password()
 
-    def login_credit_charge(self, password):
-        self._credit_charge_password = password
-
-        self.page = MenuPage()
-        self.page = self.page.login_credit_charge(password)
-
-        if isinstance(self.page, CCMenuPage):
-            logger.info("login credit charge succeed")
-
-            self.page = CCHistoryPage()
-
-            self._registerd_credit_card = self.page.registered_credit_card
-            self._charge_amount = self.page.charge_amount
-            self._charge_count = self.page.charge_count
-
-            logger.info("registered credit card: " + self._registerd_credit_card if self._registerd_credit_card else '')
-            logger.info("charge count: " + self.charge_count if self.charge_count else '')
-            logger.info("charge amount: " + self.charge_amount if self.charge_amount else '')
         else:
+            return
 
-            logger.info("login credit charge failed")
+        page = MenuPage(self._session, self._html)
+        self.balance_card = page.text_balance_card
+        self.balance_center = page.text_balance_center
 
-    def charge(self, amount):
-        self.page = CCMenuPage()
-        self.page.charge(amount)
+    def login_credit_charge(self, password:str):
+        self.credit_charge_password = password
 
-    def release(self, password):
-        self.page = CCMenuPage()
-        self.page.release(password)
+        page = MenuPage(self._session, self._html)
+        self._html = page.click_login_credit_charge()
 
-    @property
-    def nanaco_number(self):
-        return self._nanaco_number
+        self.can_credit_charge = page.can_credit_charge
 
-    @property
-    def card_number(self):
-        return self._card_number
+        if self.can_credit_charge:
+            page = CreditChargePasswordAuthPage(self._session, self._html)
+            page.input_credit_charge_password(password)
+            self._html = page.click_next()
 
-    @property
-    def balance_card(self):
-        return self._balance_card
+            page = CreditChargeMenuPage(self._session, self._html)
+            html = page.click_history()
 
-    @property
-    def balance_center(self):
-        return self._balance_center
+            page = CreditChargeHistoryPage(self._session, html)
+            self.registered_creditcard = page.text_registered_credit_card
+            self.charge_count = page.text_charge_count
+            self.charge_amount = page.text_charge_amount
 
-    @property
-    def credit_charge_password(self):
-        return  self._credit_charge_password
+    # def register(self,
+    #              number: str,
+    #              expire_month: str, expire_year: str, code: str, phone: str,
+    #              name: str, birth_year: str, birth_month: str, birth_day: str, password: str, mail: str, send_info: str,
+    #              security_code: str
+    #              ):
+    #
+    #     page = MenuPage(self._session, self._html)
+    #     self._html = page.click_login_credit_charge()
+    #
+    #     page = CreditChargeRegisterGuidePage(self._session, self._html)
+    #     self._html = page.click_next()
+    #
+    #     page = CreditChargeRegisterAgreePage(self._session, self._html)
+    #     self._html = page.click_agree()
+    #
+    #     page = CreditChargeRegisterInputPage1(self._session, self._html)
+    #     page.input_creditcard_number_1(number[:4])
+    #     page.input_creditcard_number_2(number[4:8])
+    #     page.input_creditcard_number_3(number[8:12])
+    #     page.input_creditcard_number_4(number[12:16])
+    #
+    #     page.input_creditcard_expire_month(expire_month)
+    #     page.input_creditcard_expire_year(expire_year)
+    #
+    #     page.input_security_code(code)
+    #     page.input_phone_number(phone)
+    #     self._html = page.click_next()
+    #
+    #     page = CreditChargeRegisterInputPage2(self._session, self._html)
+    #     page.input_kana_name(name)
+    #     page.input_birth_year(birth_year)
+    #     page.input_birth_month(birth_month)
+    #     page.input_birth_day(birth_day)
+    #     page.input_creditcharge_password(password)
+    #     page.input_email(mail)
+    #     page.select_send_information(send_info)
+    #     self._html = page.click_next()
+    #
+    #     page = CreditChargeRegisterConfirmPage(self._session, self._html)
+    #     self._html = page.click_confirm()
 
-    @property
-    def registered_credit_card(self):
-        return self._registerd_credit_card
+    def charge(self, value: int):
+        page = CreditChargeMenuPage(self._session, self._html)
+        self._html = page.click_charge()
 
-    @property
-    def charge_count(self):
-        return self._charge_count
+        page = CreditChargeInputPage(self._session, self._html)
+        page.input_charge_amount(value)
+        self._html = page.click_next()
 
-    @property
-    def charge_amount(self):
-        return self._charge_amount
+        page = CreditChargeConfirmPage(self._session, self._html)
+        self._html = page.click_confirm()
+
+    def cancel(self, password):
+        page = CreditChargeMenuPage(self._session, self._html)
+        self._html = page.click_cancel()
+
+        page = CreditChargeCancelPage(self._session, self._html)
+        page.input_credit_charge_password(password)
+        self._html = page.click_next()
+
+        page = CreditChargeCancelConfirmPage(self._session, self._html)
+        self._html = page.click_confirm()
+
+    def register_giftcode(self, code):
+        page = MenuPage(self._session, self._html)
+        self._html = page.click_register_gift()
+
+        page = RegisterGiftPage(self._session, self._html)
+        self._html = page.click_accept()
+
+        page = RegisterGiftCodeInputPage(self._session, self._html)
+        page.input_code(code)
+        self._html = page.click_submit()
+
+        page = RegisterGiftCodeConfirmPage(self._session, self._html)
+        self._html = page.click_confirm()
