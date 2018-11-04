@@ -120,3 +120,25 @@ class TitleParser(HTMLParser):
 
     def error(self, message):
         pass
+
+# Internal -- parse gift amount
+class GiftAmountParser(HTMLParser):
+
+    def __init__(self):
+        super().__init__()
+        self.gift_has_registered = False
+        self.gift_amount = None
+        self.gift_receivable_date = None
+
+    def handle_data(self, data):
+        if self.lasttag == 'strong' and u'このギフトIDは、すでに下記の通り登録済です。' in data:
+            self.gift_has_registered = True
+
+        if self.lasttag == 'td' and '円' in data:
+            self.gift_amount = data.replace('円', '')
+
+        if self.lasttag == 'td' and 'から' in data:
+            self.gift_receivable_date = data.replace('から', '')
+
+    def error(self, message):
+        pass

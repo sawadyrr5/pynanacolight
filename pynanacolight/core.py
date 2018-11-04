@@ -145,4 +145,12 @@ class PyNanacoLight:
         self._html = page.click_submit()
 
         page = RegisterGiftCodeConfirmPage(self._session, self._html)
-        self._html = page.click_confirm()
+
+        if page.gift_has_registered is False:
+            self._html = page.click_confirm()
+
+        return {
+            "gift_has_registered": page.gift_has_registered,
+            "gift_amount": page.gift_amount,
+            "gift_receivable_date": page.gift_receivable_date
+        }
