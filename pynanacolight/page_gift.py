@@ -4,7 +4,7 @@
 """
 from requests import session
 
-from pynanacolight.page import _post
+from pynanacolight.page import _post, PyNanacoException
 from pynanacolight.parser import InputTagParser, GiftAmountParser
 from pynanacolight.util import logging
 

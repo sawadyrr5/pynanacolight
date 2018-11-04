@@ -4,7 +4,7 @@ from logging import getLogger, StreamHandler, Formatter
 from pynanacolight.parser import InputTagParser
 from requests import session
 
-LOG_LEVEL = logging.DEBUG
+LOG_LEVEL = logging.WARNING
 
 logger = getLogger(__name__)
 logger.setLevel(LOG_LEVEL)
