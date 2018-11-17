@@ -5,7 +5,7 @@
 from requests import session
 
 from pynanacolight.page import _post, PyNanacoException
-from pynanacolight.parser import InputTagParser, GiftAmountParser
+from pynanacolight.parser import InputTagParser, GiftAmountParser, RegisterGiftCodeResultPageParser
 from pynanacolight.util import logging
 
 
@@ -33,7 +33,7 @@ class RegisterGiftPage:
         return html
 
 
-class RegisterGiftCodeInputPage:
+class RegisterGiftInputPage:
     INPUT_DATA_NAMES = ["vsid"]
 
     URL = 'https://nanacogift.jp/ap/p/register2.do'
@@ -67,7 +67,7 @@ class RegisterGiftCodeInputPage:
         return html
 
 
-class RegisterGiftCodeConfirmPage:
+class RegisterGiftConfirmPage:
     INPUT_DATA_NAMES = ["vsid"]
 
     URL = 'https://nanacogift.jp/ap/p/register4.do'
@@ -112,6 +112,33 @@ class RegisterGiftCodeConfirmPage:
             data=self.data
         )
         return html
+
+
+class RegisterGiftResultPage:
+    def __init__(self, session: session(), html):
+        self._session = session
+
+        # parser = RegisterGiftCodeResultPageParser()
+        # parser.feed(html.text)
+
+        parser = GiftAmountParser()
+        parser.feed(html.text)
+
+        self._gift_amount = parser.gift_amount
+        self._gift_has_registered = parser.gift_has_registered
+        self._gift_receivable_date = parser.gift_receivable_date
+
+    @property
+    def gift_amount(self):
+        return self._gift_amount
+
+    @property
+    def gift_has_registered(self):
+        return self._gift_has_registered
+
+    @property
+    def gift_receivable_date(self):
+        return self._gift_receivable_date
 
 
 class InvalidGiftcodeException(PyNanacoException):
