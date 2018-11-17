@@ -4,9 +4,10 @@
 """
 from html.parser import HTMLParser
 from urllib.parse import parse_qs
+from datetime import datetime as dt
 
 
-# Internal -- parse all <INPUT> tags, and return dictionary object.
+# Internal -- 全てのINPUTタグをパースしてdictを返す
 class InputTagParser(HTMLParser):
 
     def __init__(self):
@@ -27,7 +28,7 @@ class InputTagParser(HTMLParser):
         pass
 
 
-# Internal -- parse all <A> tags, and return list of href attribute.
+# Internal -- すべてのAタグをパースしてhref属性のリストを返す
 class AnchorTagParser(HTMLParser):
 
     def __init__(self):
@@ -50,30 +51,41 @@ class AnchorTagParser(HTMLParser):
         pass
 
 
-# Internal -- parse menu page <P> tags.
+# Internal -- メニューページのPタグをパースする
 class BalanceParser(HTMLParser):
 
     def __init__(self):
         super().__init__()
-        self.amount = []
+        self._amount = []
+        self._timestamp = []
 
         self.balance_card = None
         self.balance_center = None
+        self.balance_card_timestamp = None
+        self.balance_center_timestamp = None
 
     def handle_data(self, data):
         if self.lasttag == 'p' and '円' in data:
             data = data.replace('円', '').replace(',', '')
-            self.amount.append(data)
+            self._amount.append(data)
 
-            if len(self.amount) == 2:
-                self.balance_card = int(self.amount[0])
-                self.balance_center = int(self.amount[1])
+            if len(self._amount) == 2:
+                self.balance_card = int(self._amount[0])
+                self.balance_center = int(self._amount[1])
+
+        if self.lasttag == 'span' and '時点' in data:
+            data = data.replace('時点', '')
+            self._timestamp.append(dt.strptime(data, "%Y年%m月%d日%H時%M分"))
+
+            if len(self._timestamp) == 2:
+                self.balance_card_timestamp = self._timestamp[0]
+                self.balance_center_timestamp = self._timestamp[1]
 
     def error(self, message):
         pass
 
 
-# Internal -- parse credit charge history page tags.
+# Internal -- クレジットチャージ履歴ページをパースする
 class CreditChargeHistoryParser(HTMLParser):
 
     def __init__(self):
@@ -107,7 +119,7 @@ class CreditChargeHistoryParser(HTMLParser):
         pass
 
 
-# Internal -- parse <title> tag
+# Internal -- タイトルタグをパースする
 class TitleParser(HTMLParser):
 
     def __init__(self):
@@ -121,7 +133,8 @@ class TitleParser(HTMLParser):
     def error(self, message):
         pass
 
-# Internal -- parse gift amount
+
+# Internal -- ギフト額面などをパースする
 class GiftAmountParser(HTMLParser):
 
     def __init__(self):
@@ -138,7 +151,23 @@ class GiftAmountParser(HTMLParser):
             self.gift_amount = data.replace('円', '')
 
         if self.lasttag == 'td' and 'から' in data:
-            self.gift_receivable_date = data.replace('から', '')
+            data = data.replace('から', '')
+            self.gift_receivable_date = dt.strptime(data, "%Y/%m/%d %p%I:00")
+
+    def error(self, message):
+        pass
+
+
+# Internal -- ギフト登録結果をパースする
+class RegisterGiftCodeResultPageParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.gift_receivable_date = None
+
+    def handle_data(self, data):
+        if self.lasttag == 'td' and 'から' in data:
+            data = data.replace('から', '')
+            self.gift_receivable_date = dt.strptime(data, "%Y/%m/%d %p%I:00")
 
     def error(self, message):
         pass

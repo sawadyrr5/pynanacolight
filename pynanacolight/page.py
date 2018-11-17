@@ -108,7 +108,7 @@ class MenuPage:
         parser = AnchorTagParser()
         parser.feed(html.text)
 
-        # prepare parameter
+        # パラメータ準備
         self.data = {}
         self.data.update({"_SeqNo": parser.anchors[0]['_SeqNo'][0]})
         self.data.update({"_WBSessionID": parser.anchors[0]['_WBSessionID'][0]})
@@ -117,12 +117,15 @@ class MenuPage:
         self._balance_card = None
         self._balance_center = None
 
-        # read balance
+        # 残高読み取り
         parser = BalanceParser()
         parser.feed(html.text)
 
         self._balance_card = parser.balance_card
         self._balance_center = parser.balance_center
+
+        self._balance_card_timestamp = parser.balance_card_timestamp
+        self._balance_center_timestamp = parser.balance_center_timestamp
 
         self._can_credit_charge = None
 
@@ -176,6 +179,14 @@ class MenuPage:
     @property
     def text_balance_center(self):
         return self._balance_center
+
+    @property
+    def text_balance_card_timestamp(self):
+        return self._balance_card_timestamp
+
+    @property
+    def text_balance_center_timestamp(self):
+        return self._balance_center_timestamp
 
     @property
     def can_credit_charge(self):

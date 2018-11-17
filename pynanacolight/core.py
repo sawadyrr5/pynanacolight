@@ -2,15 +2,16 @@
 from pynanacolight.page import LoginPage, MenuPage
 from pynanacolight.page_creditcharge import CreditChargeMenuPage, CreditChargeHistoryPage, CreditChargePasswordAuthPage, \
     CreditChargeInputPage, CreditChargeConfirmPage, CreditChargeCancelPage, CreditChargeCancelConfirmPage
-    # CreditChargeRegisterGuidePage, CreditChargeRegisterAgreePage, CreditChargeRegisterInputPage1, \
-    # CreditChargeRegisterInputPage2, CreditChargeRegisterConfirmPage
-from pynanacolight.page_gift import RegisterGiftPage, RegisterGiftCodeInputPage, RegisterGiftCodeConfirmPage
+# CreditChargeRegisterGuidePage, CreditChargeRegisterAgreePage, CreditChargeRegisterInputPage1, \
+# CreditChargeRegisterInputPage2, CreditChargeRegisterConfirmPage
+from pynanacolight.page_gift import RegisterGiftPage, RegisterGiftInputPage, RegisterGiftConfirmPage, \
+    RegisterGiftResultPage
 
 from requests import session
 
 
 class PyNanacoLight:
-    def __init__(self, _session: session()=None):
+    def __init__(self, _session: session() = None):
         if _session is None:
             _session = session()
         self._session = _session
@@ -20,6 +21,9 @@ class PyNanacoLight:
         self.balance_card = None
         self.balance_center = None
 
+        self.balance_card_timestamp = None
+        self.balance_center_timestamp = None
+
         self.can_credit_charge = None
 
         self.credit_charge_password = ''
@@ -28,7 +32,7 @@ class PyNanacoLight:
         self.charge_count = None
         self.charge_amount = None
 
-    def login(self, nanaco_number:str, card_number:str=None, password:str=None):
+    def login(self, nanaco_number: str, card_number: str = None, password: str = None):
         page = LoginPage(self._session)
 
         page.input_nanaco_number(nanaco_number)
@@ -48,7 +52,10 @@ class PyNanacoLight:
         self.balance_card = page.text_balance_card
         self.balance_center = page.text_balance_center
 
-    def login_credit_charge(self, password:str):
+        self.balance_card_timestamp = page.text_balance_card_timestamp
+        self.balance_center_timestamp = page.text_balance_center_timestamp
+
+    def login_credit_charge(self, password: str):
         self.credit_charge_password = password
 
         page = MenuPage(self._session, self._html)
@@ -140,17 +147,34 @@ class PyNanacoLight:
         page = RegisterGiftPage(self._session, self._html)
         self._html = page.click_accept()
 
-        page = RegisterGiftCodeInputPage(self._session, self._html)
+        page = RegisterGiftInputPage(self._session, self._html)
         page.input_code(code)
         self._html = page.click_submit()
 
-        page = RegisterGiftCodeConfirmPage(self._session, self._html)
+        page = RegisterGiftConfirmPage(self._session, self._html)
 
-        if page.gift_has_registered is False:
+        _has_registered = page.gift_has_registered
+        _gift_amount = page.gift_amount
+        _gift_receivable_date = page.gift_receivable_date
+
+        # 既に同一のnanacoに登録済みの場合
+        if page.gift_has_registered:
+            return {
+                "gift_has_registered": _has_registered,
+                "gift_amount": _gift_amount,
+                "gift_receivable_date": _gift_receivable_date
+            }
+        else:
             self._html = page.click_confirm()
 
-        return {
-            "gift_has_registered": page.gift_has_registered,
-            "gift_amount": page.gift_amount,
-            "gift_receivable_date": page.gift_receivable_date
-        }
+            page = RegisterGiftResultPage(self._session, self._html)
+
+            _has_registered = page.gift_has_registered
+            _gift_amount = page.gift_amount
+            _gift_receivable_date = page.gift_receivable_date
+
+            return {
+                "gift_has_registered": _has_registered,
+                "gift_amount": _gift_amount,
+                "gift_receivable_date": _gift_receivable_date
+            }
