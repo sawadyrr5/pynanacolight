@@ -1,4 +1,4 @@
-# PyNanacoLight
+# pynanacolight
 nanacoの残高確認, クレジットチャージ実行, クレジットチャージ解約, ギフト登録を行います.
 
 ## How to use
