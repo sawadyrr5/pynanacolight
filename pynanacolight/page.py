@@ -141,23 +141,3 @@ class MenuPage:
         html = self._session.get(BASE_URL, params=self.data)
         html.encoding = ENCODING
         return html
-
-    # @property
-    # def text_balance_card(self):
-    #     return self.balance_card
-
-    # @property
-    # def text_balance_center(self):
-    #     return self.balance_center
-
-    # @property
-    # def text_balance_card_timestamp(self):
-    #     return self.balance_card_timestamp
-
-    # @property
-    # def text_balance_center_timestamp(self):
-    #     return self.balance_center_timestamp
-
-    # @property
-    # def can_credit_charge(self):
-    #     return self.can_credit_charge

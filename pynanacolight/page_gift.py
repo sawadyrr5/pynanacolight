@@ -119,13 +119,6 @@ class GiftIDInputPage:
             self.gift_receipt_number = None
             self.gift_receivable_date = None
 
-        # debug
-        msg_true = "登録済みです"
-        msg_false = "登録されていません"
-
-        logger.info(
-            msg_true if self.gift_has_registered else msg_false)
-
         return html
 
     def _validate_gift_id(self, html):
@@ -183,27 +176,6 @@ class GiftIDConfirmPage:
             self.gift_receipt_number = None
             self.gift_receivable_date = None
 
-    # def _has_registered(self, html):
-    #     parser = GiftIDRegistrationResultPageParser()
-    #     parser.feed(html.text)
-    #     return parser.gift_has_registered
-
-    # @property
-    # def gift_amount(self):
-    #     return self._gift_amount
-
-    # @property
-    # def gift_has_registered(self):
-    #     return self._gift_has_registered
-
-    # @property
-    # def gift_receipt_number(self):
-    #     return self._gift_receipt_number
-
-    # @property
-    # def gift_receivable_date(self):
-    #     return self._gift_receivable_date
-
     @logging
     def click_register(self):
         URL = "https://nanacogift.jp/ap/p/register4.do"
@@ -215,8 +187,6 @@ class GiftIDConfirmPage:
 class GiftIDRegistrationResultPage:
     """ギフトID登録完了(register5)
 
-    https://nanacogift.jp/ap/p/register5.do?vsid=YL02yQjprlyju7i_7BkNzkfE-IIKL6lw%211979915677%211650186586345
-
     """
 
     def __init__(self, session: Session, html):
@@ -224,28 +194,8 @@ class GiftIDRegistrationResultPage:
 
         parser = GiftIDRegistrationResultPageParser()
         parser.feed(html.text)
-        # self._parser = parser
-
-        # parser = GiftAmountParser()
-        # parser.feed(html.text)
 
         self.gift_amount = parser.gift_amount
         self.gift_has_registered = parser.gift_has_registered
         self.gift_receivable_date = parser.gift_receivable_date
         self.gift_receipt_number = parser.gift_receipt_number
-
-    # @property
-    # def gift_amount(self):
-    #     return self._parser.gift_amount
-
-    # @property
-    # def gift_has_registered(self):
-    #     return self._parser.gift_has_registered
-
-    # @property
-    # def gift_receipt_number(self):
-    #     return self._parser.gift_receipt_number
-
-    # @property
-    # def gift_receivable_date(self):
-    #     return self._parser.gift_receivable_date
