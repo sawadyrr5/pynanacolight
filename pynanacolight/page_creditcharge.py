@@ -2,16 +2,17 @@
 """
 ページの抽象レベル操作を行う
 """
-from requests import session
+from requests import Session
 
-from pynanacolight.page import BASE_URL, ENCODING, DEFAULT_INPUT_DATA_NAMES, _get, _post
-from pynanacolight.parser import InputTagParser, AnchorTagParser, CreditChargeHistoryParser, TitleParser
+from pynanacolight.page import BASE_URL, ENCODING, DEFAULT_INPUT_DATA_NAMES
+from pynanacolight.parser import InputTagParser, AnchorTagParser, \
+    CreditChargeHistoryParser
 from pynanacolight.util import logging
 
 
 class CreditChargePasswordAuthPage:
 
-    def __init__(self, session: session(), html):
+    def __init__(self, session: Session, html):
         self._session = session
 
         parser = InputTagParser()
@@ -36,17 +37,14 @@ class CreditChargePasswordAuthPage:
             }
         )
 
-        html = _post(
-            session=self._session,
-            url=BASE_URL,
-            data=self.data
-        )
+        html = self._session.post(BASE_URL, self.data)
+        html.encoding = ENCODING
         return html
 
 
 # class CreditChargeRegisterGuidePage:
 #
-#     def __init__(self, session: session(), html):
+#     def __init__(self, session: Session, html):
 #         self._session = session
 #
 #         parser = InputTagParser()
@@ -73,7 +71,7 @@ class CreditChargePasswordAuthPage:
 #
 # class CreditChargeRegisterAgreePage:
 #
-#     def __init__(self, session: session(), html):
+#     def __init__(self, session: Session, html):
 #         self._session = session
 #
 #         parser = InputTagParser()
@@ -100,7 +98,7 @@ class CreditChargePasswordAuthPage:
 #
 # class CreditChargeRegisterInputPage1:
 #
-#     def __init__(self, session: session(), html):
+#     def __init__(self, session: Session, html):
 #         self._session = session
 #
 #         parser = InputTagParser()
@@ -191,7 +189,7 @@ class CreditChargePasswordAuthPage:
 #
 # class CreditChargeRegisterInputPage2:
 #
-#     def __init__(self, session: session(), html):
+#     def __init__(self, session: Session, html):
 #         self._session = session
 #
 #         parser = InputTagParser()
@@ -276,7 +274,7 @@ class CreditChargePasswordAuthPage:
 #
 # class CreditChargeRegisterConfirmPage:
 #
-#     def __init__(self, session: session(), html):
+#     def __init__(self, session: Session, html):
 #         self._session = session
 #
 #         parser = InputTagParser()
@@ -302,9 +300,14 @@ class CreditChargePasswordAuthPage:
 
 
 class CreditChargeMenuPage:
+    """creadit charge menu page
+
+    Returns:
+        _type_: _description_
+    """
 
     @logging
-    def __init__(self, session: session(), html):
+    def __init__(self, session: Session, html):
         self._session = session
 
         parser = AnchorTagParser()
@@ -313,8 +316,10 @@ class CreditChargeMenuPage:
         # prepare parameter
         self.data = {}
         self.data.update({"_SeqNo": parser.anchors[0]['_SeqNo'][0]})
-        self.data.update({"_WBSessionID": parser.anchors[0]['_WBSessionID'][0]})
-        self.data.update({"_DataStoreID": parser.anchors[0]['_DataStoreID'][0]})
+        self.data.update(
+            {"_WBSessionID": parser.anchors[0]['_WBSessionID'][0]})
+        self.data.update(
+            {"_DataStoreID": parser.anchors[0]['_DataStoreID'][0]})
 
     @logging
     def click_charge(self):
@@ -325,12 +330,8 @@ class CreditChargeMenuPage:
                 "_PageID": 'SCBS_PCB8001'
             }
         )
-
-        html = _get(
-            session=self._session,
-            url=BASE_URL,
-            param=self.data
-        )
+        html = self._session.get(BASE_URL, self.data)
+        html.encoding = ENCODING
         return html
 
     @logging
@@ -342,12 +343,8 @@ class CreditChargeMenuPage:
                 "_PageID": 'SCBS_PCB8001'
             }
         )
-
-        html = _get(
-            session=self._session,
-            url=BASE_URL,
-            param=self.data
-        )
+        html = self._session.get(BASE_URL, self.data)
+        html.encoding = ENCODING
         return html
 
     @logging
@@ -359,18 +356,16 @@ class CreditChargeMenuPage:
                 "_PageID": 'SCBS_PCB8001'
             }
         )
-
-        html = _get(
-            session=self._session,
-            url=BASE_URL,
-            param=self.data
-        )
+        html = self._session.get(BASE_URL, self.data)
+        html.encoding = ENCODING
         return html
 
 
 class CreditChargeHistoryPage:
+    """credit charge history page
+    """
 
-    def __init__(self, session: session(), html):
+    def __init__(self, session: Session, html):
         self._session = session
 
         self._registered_credit_card = ''
@@ -399,8 +394,10 @@ class CreditChargeHistoryPage:
 
 
 class CreditChargeInputPage:
+    """credit charge input page
+    """
 
-    def __init__(self, session: session(), html):
+    def __init__(self, session: Session, html):
         self._session = session
         self._html = html
 
@@ -426,16 +423,13 @@ class CreditChargeInputPage:
             }
         )
 
-        html = _post(
-            session=self._session,
-            url=BASE_URL,
-            data=self.data
-        )
+        html = self._session.post(BASE_URL, self.data)
+        html.encoding = ENCODING
         return html
 
 
 class CreditChargeConfirmPage:
-    def __init__(self, session: session(), html):
+    def __init__(self, session: Session, html):
         self._session = session
         self._html = html
 
@@ -453,16 +447,13 @@ class CreditChargeConfirmPage:
             }
         )
 
-        html = _post(
-            session=self._session,
-            url=BASE_URL,
-            data=self.data
-        )
+        html = self._session.post(BASE_URL, self.data)
+        html.encoding = ENCODING
         return html
 
 
 class CreditChargeCancelPage:
-    def __init__(self, session: session(), html):
+    def __init__(self, session: Session, html):
         self._session = session
         self._html = html
 
@@ -488,16 +479,13 @@ class CreditChargeCancelPage:
             }
         )
 
-        html = _post(
-            session=self._session,
-            url=BASE_URL,
-            data=self.data
-        )
+        html = self._session.post(BASE_URL, self.data)
+        html.encoding = ENCODING
         return html
 
 
 class CreditChargeCancelConfirmPage:
-    def __init__(self, session: session(), html):
+    def __init__(self, session: Session, html):
         self._session = session
         self._html = html
 
@@ -515,9 +503,6 @@ class CreditChargeCancelConfirmPage:
             }
         )
 
-        html = _post(
-            session=self._session,
-            url=BASE_URL,
-            data=self.data
-        )
+        html = self._session.post(BASE_URL, self.data)
+        html.encoding = ENCODING
         return html
